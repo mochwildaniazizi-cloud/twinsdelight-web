@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-retro-bg text-retro-dark antialiased;
+  }
+}
+
+@layer components {
+  .card-retro {
+    @apply bg-white border-2 border-retro-dark rounded-2xl shadow-retro-md transition-all duration-200;
+  }
+
+  .btn-retro-primary {
+    @apply bg-retro-blue text-white font-bold py-3 px-6 border-2 border-retro-dark rounded-xl shadow-retro-md hover:-translate-y-0.5 hover:shadow-retro-lg active:translate-y-1 active:shadow-retro-active transition-all duration-150;
+  }
+
+  .btn-retro-secondary {
+    @apply bg-retro-orange text-retro-dark font-bold py-3 px-6 border-2 border-retro-dark rounded-xl shadow-retro-md hover:-translate-y-0.5 hover:shadow-retro-lg active:translate-y-1 active:shadow-retro-active transition-all duration-150;
+  }
+
+  .input-retro {
+    @apply w-full bg-white border-2 border-retro-dark rounded-xl px-4 py-3 focus:outline-none focus:ring-4 focus:ring-retro-blue/30 transition-all duration-200;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out forwards;
+}
+
+@keyframes marqueeLeft {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+@keyframes marqueeRight {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-marquee-left {
+  animation: marqueeLeft 35s linear infinite;
+}
+
+.animate-marquee-right {
+  animation: marqueeRight 35s linear infinite;
+}
