@@ -4,6 +4,8 @@ import RetroSelect from './components/ui/RetroSelect';
 import RetroDatePicker from './components/ui/RetroDatePicker';
 import RetroNumberInput from './components/ui/RetroNumberInput';
 import AdminDashboard from './pages/AdminDashboard';
+import ToastContainer from './components/ui/Toast';
+import { useToast } from './hooks/useToast';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
@@ -92,6 +94,8 @@ function App() {
     return saved ? JSON.parse(saved) : initialMockData;
   });
 
+  const { toasts, removeToast, toast } = useToast();
+
   const fetchOrders = async () => {
     if (!supabase) {
       console.warn('Supabase not configured. Using local storage cache.');
@@ -120,6 +124,7 @@ function App() {
       }
     } catch (err) {
       console.error('Error fetching orders from Supabase, using cache:', err);
+      toast.warning('Mode Offline', 'Menampilkan data dari cache lokal.');
       const saved = localStorage.getItem('twins_orders');
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -285,9 +290,11 @@ function App() {
             .eq('id', editingOrderId);
 
           if (error) throw error;
+          toast.success('Pesanan Diperbarui', `Pesanan ${updatedData.name} berhasil diubah.`);
           fetchOrders();
         } catch (err) {
           console.error('Error updating order in Supabase:', err);
+          toast.error('Gagal Menyimpan', 'Perubahan tidak dapat disimpan. Coba lagi.');
         }
       } else {
         const updatedOrders = orders.map(order => {
@@ -331,9 +338,11 @@ function App() {
             ]);
 
           if (error) throw error;
+          toast.success('Pesanan Terkirim! 🎉', `Terima kasih, ${newOrder.name}! Pesanan kamu sudah kami terima.`);
           fetchOrders();
         } catch (err) {
           console.error('Error saving order to Supabase:', err);
+          toast.error('Gagal Mengirim', 'Pesanan tidak tersimpan. Mohon coba lagi.');
         }
       } else {
         const updatedOrders = [newOrder, ...orders];
@@ -375,13 +384,19 @@ function App() {
           .eq('id', orderId);
 
         if (error) throw error;
+        toast.info(
+          newStatus === 'Selesai' ? '✅ Pesanan Selesai' : '🔄 Status Diperbarui',
+          `Status pesanan berhasil diubah ke "${newStatus}".`
+        );
         fetchOrders();
       } catch (err) {
         console.error('Error updating status in Supabase:', err);
+        toast.error('Gagal Update Status', 'Status pesanan tidak dapat diubah.');
       }
     } else {
       const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
       localStorage.setItem('twins_orders', JSON.stringify(updatedOrders));
+      toast.info('Status Diperbarui', `Status berhasil diubah ke "${newStatus}".`);
     }
   };
 
@@ -442,13 +457,16 @@ function App() {
             .eq('id', orderId);
 
           if (error) throw error;
+          toast.success('Pesanan Dihapus', 'Data pesanan berhasil dihapus dari database.');
           fetchOrders();
         } catch (err) {
           console.error('Error deleting order in Supabase:', err);
+          toast.error('Gagal Menghapus', 'Pesanan tidak dapat dihapus. Coba lagi.');
         }
       } else {
         const updatedOrders = orders.filter(order => order.id !== orderId);
         localStorage.setItem('twins_orders', JSON.stringify(updatedOrders));
+        toast.success('Pesanan Dihapus', 'Data pesanan berhasil dihapus.');
       }
     }
   };
@@ -1049,6 +1067,9 @@ Mohon segera diproses ya, terima kasih!`;
           </div>
         </div>
       )}
+
+      {/* TOAST NOTIFICATIONS */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }
