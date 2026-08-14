@@ -95,7 +95,7 @@ function App() {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('id, name, phone, address, date, status, boxesDetail:boxesdetail, created_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -257,7 +257,7 @@ function App() {
               phone: updatedData.phone,
               address: updatedData.address,
               date: updatedData.date,
-              boxesDetail: updatedData.boxesDetail
+              boxesdetail: updatedData.boxesDetail
             })
             .eq('id', editingOrderId);
 
@@ -303,7 +303,7 @@ function App() {
                 address: newOrder.address,
                 date: newOrder.date,
                 status: newOrder.status,
-                boxesDetail: newOrder.boxesDetail
+                boxesdetail: newOrder.boxesDetail
               }
             ]);
 
