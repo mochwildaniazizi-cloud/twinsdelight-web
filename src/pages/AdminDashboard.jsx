@@ -42,7 +42,7 @@ export default function AdminDashboard({
       {/* CATEGORY SWITCHER */}
       <div className="grid grid-cols-3 gap-2 bg-retro-bg border-2 border-retro-dark rounded-xl p-1 shadow-retro-sm select-none">
         {[
-          { id: 'twinsbollen', label: <img src="/TwinsBollen.png" alt="TwinsBollen" className="h-20 mx-auto object-contain" /> },
+          { id: 'twinsbollen', label: <img src="/TwinsBollen.png" alt="TwinsBollen" className="h-12 mx-auto object-contain" /> },
           { id: 'twinsdonut', label: '🍩 TwinsDonut' },
           { id: 'twinscake', label: '🍰 TwinsCake' }
         ].map(cat => (
