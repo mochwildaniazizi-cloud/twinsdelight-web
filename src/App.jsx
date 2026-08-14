@@ -8,8 +8,16 @@ import AdminDashboard from './pages/AdminDashboard';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
 
-// Inisialisasi client hanya jika kredensial telah diset dan bukan placeholder
-const isSupabaseConfigured = supabaseUrl && supabaseUrl !== 'https://your-project-ref.supabase.co' && supabaseAnonKey && supabaseAnonKey !== '';
+// Inisialisasi client hanya jika kredensial telah diset secara valid dan bukan placeholder
+const isSupabaseConfigured = 
+  supabaseUrl && 
+  typeof supabaseUrl === 'string' &&
+  supabaseUrl.startsWith('http') && 
+  supabaseUrl !== 'https://your-project-ref.supabase.co' && 
+  supabaseAnonKey && 
+  supabaseAnonKey !== 'undefined' && 
+  supabaseAnonKey !== 'null' && 
+  supabaseAnonKey !== '';
 
 const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
