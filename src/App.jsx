@@ -101,13 +101,28 @@ function App() {
       if (error) throw error;
 
       if (data) {
-        setOrders(data);
-        localStorage.setItem('twins_orders', JSON.stringify(data));
+        const sanitized = data.map(o => ({
+          ...o,
+          totalBoxes: o.totalBoxes !== undefined && o.totalBoxes !== null
+            ? Number(o.totalBoxes)
+            : (o.boxesDetail ? o.boxesDetail.length : 0)
+        }));
+        setOrders(sanitized);
+        localStorage.setItem('twins_orders', JSON.stringify(sanitized));
       }
     } catch (err) {
       console.error('Error fetching orders from Supabase, using cache:', err);
       const saved = localStorage.getItem('twins_orders');
-      if (saved) setOrders(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const sanitized = parsed.map(o => ({
+          ...o,
+          totalBoxes: o.totalBoxes !== undefined && o.totalBoxes !== null
+            ? Number(o.totalBoxes)
+            : (o.boxesDetail ? o.boxesDetail.length : 0)
+        }));
+        setOrders(sanitized);
+      }
     }
   };
 
@@ -473,18 +488,24 @@ function App() {
       : orders;
 
     filteredOrders.forEach(order => {
-      totalBox += order.totalBoxes;
-      order.boxesDetail.forEach(box => {
-        if (box.flavor === 'Cokelat (8 pcs)') cokelat += 8;
-        else if (box.flavor === 'Keju (8 pcs)') keju += 8;
-        else if (box.flavor === 'Tape (8 pcs)') tape += 8;
-        else if (box.flavor === 'Mix (4 Cokelat, 4 Keju)') { cokelat += 4; keju += 4; }
-        else if (box.flavor === 'Custom (Pilih Sendiri)' && box.custom) {
-          cokelat += box.custom.cokelat;
-          keju += box.custom.keju;
-          tape += box.custom.tape;
-        }
-      });
+      const boxesCount = order.totalBoxes !== undefined && order.totalBoxes !== null
+        ? Number(order.totalBoxes)
+        : (order.boxesDetail ? order.boxesDetail.length : 0);
+      totalBox += boxesCount;
+      
+      if (order.boxesDetail) {
+        order.boxesDetail.forEach(box => {
+          if (box.flavor === 'Cokelat (8 pcs)') cokelat += 8;
+          else if (box.flavor === 'Keju (8 pcs)') keju += 8;
+          else if (box.flavor === 'Tape (8 pcs)') tape += 8;
+          else if (box.flavor === 'Mix (4 Cokelat, 4 Keju)') { cokelat += 4; keju += 4; }
+          else if (box.flavor === 'Custom (Pilih Sendiri)' && box.custom) {
+            cokelat += box.custom.cokelat;
+            keju += box.custom.keju;
+            tape += box.custom.tape;
+          }
+        });
+      }
     });
 
     return { totalBox, totalPcs: totalBox * 8, cokelat, keju, tape };
