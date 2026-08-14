@@ -6,6 +6,7 @@ import RetroNumberInput from './components/ui/RetroNumberInput';
 import AdminDashboard from './pages/AdminDashboard';
 import ToastContainer from './components/ui/Toast';
 import { useToast } from './hooks/useToast';
+import ConfirmModal from './components/ui/ConfirmModal';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.SUPABASE_ANON_KEY || '';
@@ -95,6 +96,9 @@ function App() {
   });
 
   const { toasts, removeToast, toast } = useToast();
+
+  // State untuk modal konfirmasi hapus
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null });
 
   const fetchOrders = async () => {
     if (!supabase) {
@@ -440,34 +444,39 @@ function App() {
     return `https://wa.me/${clean}`;
   };
 
-  const deleteOrder = async (orderId) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus pesanan ini?')) {
-      if (editingOrderId === orderId) {
-        cancelEdit();
+  // Buka modal konfirmasi hapus
+  const deleteOrder = (orderId) => {
+    setConfirmModal({ isOpen: true, orderId });
+  };
+
+  // Eksekusi hapus setelah dikonfirmasi
+  const confirmDeleteOrder = async () => {
+    const orderId = confirmModal.orderId;
+    setConfirmModal({ isOpen: false, orderId: null });
+
+    if (editingOrderId === orderId) cancelEdit();
+
+    // Optimistic update
+    setOrders(orders.filter(order => order.id !== orderId));
+
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('orders')
+          .delete()
+          .eq('id', orderId);
+
+        if (error) throw error;
+        toast.success('Pesanan Dihapus', 'Data pesanan berhasil dihapus dari database.');
+        fetchOrders();
+      } catch (err) {
+        console.error('Error deleting order in Supabase:', err);
+        toast.error('Gagal Menghapus', 'Pesanan tidak dapat dihapus. Coba lagi.');
       }
-
-      // Optimistic update
-      setOrders(orders.filter(order => order.id !== orderId));
-
-      if (supabase) {
-        try {
-          const { error } = await supabase
-            .from('orders')
-            .delete()
-            .eq('id', orderId);
-
-          if (error) throw error;
-          toast.success('Pesanan Dihapus', 'Data pesanan berhasil dihapus dari database.');
-          fetchOrders();
-        } catch (err) {
-          console.error('Error deleting order in Supabase:', err);
-          toast.error('Gagal Menghapus', 'Pesanan tidak dapat dihapus. Coba lagi.');
-        }
-      } else {
-        const updatedOrders = orders.filter(order => order.id !== orderId);
-        localStorage.setItem('twins_orders', JSON.stringify(updatedOrders));
-        toast.success('Pesanan Dihapus', 'Data pesanan berhasil dihapus.');
-      }
+    } else {
+      const updatedOrders = orders.filter(order => order.id !== orderId);
+      localStorage.setItem('twins_orders', JSON.stringify(updatedOrders));
+      toast.success('Pesanan Dihapus', 'Data pesanan berhasil dihapus.');
     }
   };
 
@@ -1070,6 +1079,18 @@ Mohon segera diproses ya, terima kasih!`;
 
       {/* TOAST NOTIFICATIONS */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+      {/* CONFIRM MODAL HAPUS PESANAN */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Hapus Pesanan?"
+        message="Pesanan yang dihapus tidak dapat dikembalikan. Apakah kamu yakin ingin menghapus pesanan ini?"
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        confirmType="danger"
+        onConfirm={confirmDeleteOrder}
+        onCancel={() => setConfirmModal({ isOpen: false, orderId: null })}
+      />
     </div>
   );
 }
