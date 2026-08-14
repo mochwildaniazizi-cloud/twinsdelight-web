@@ -42,14 +42,14 @@ export default function AdminDashboard({
       {/* CATEGORY SWITCHER */}
       <div className="grid grid-cols-3 gap-2 bg-retro-bg border-2 border-retro-dark rounded-xl p-1 shadow-retro-sm select-none">
         {[
-          { id: 'twinsbollen', label: '🍩 TwinsBollen' },
+          { id: 'twinsbollen', label: <img src="/TwinsBollen.png" alt="TwinsBollen" className="h-5 mx-auto object-contain" /> },
           { id: 'twinsdonut', label: '🍩 TwinsDonut' },
           { id: 'twinscake', label: '🍰 TwinsCake' }
         ].map(cat => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`py-2 text-xs font-black rounded-lg transition-all cursor-pointer border-2 ${
+            className={`py-2 text-xs font-black rounded-lg transition-all cursor-pointer border-2 flex items-center justify-center ${
               activeCategory === cat.id
                 ? 'bg-retro-orange text-retro-dark shadow-retro-sm border-retro-dark'
                 : 'text-retro-dark border-transparent hover:bg-white/50'
