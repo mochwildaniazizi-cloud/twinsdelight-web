@@ -405,6 +405,9 @@ function App() {
   };
 
   const startEditOrder = (order) => {
+    // Pastikan halaman admin aktif
+    setUserRole('seller');
+    window.history.pushState({}, '', '/admin');
     setEditingOrderId(order.id);
     setCustomerName(order.name);
     setCustomerPhone(order.phone || '');
@@ -791,8 +794,9 @@ Mohon segera diproses ya, terima kasih!`;
             </section>
           )}
 
-          {/* POP-UP MODAL INPUT/EDIT PESANAN */}
-          {isFormOpen && (
+
+          {/* POP-UP MODAL INPUT PESANAN PEMBELI — hanya tampil saat bukan mode edit */}
+          {isFormOpen && !editingOrderId && (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
               <div className="card-retro bg-white w-full max-w-md p-5 space-y-4 animate-fade-in relative my-8">
                 <div className="flex justify-between items-center border-b-4 border-retro-dark border-dotted pb-3">
@@ -1021,7 +1025,195 @@ Mohon segera diproses ya, terima kasih!`;
         </div>
       )}
 
-      {/* POP-UP MODAL LOGIN ADMIN */}
+      {/* ===== MODAL EDIT PESANAN — tampil di halaman admin ===== */}
+      {isFormOpen && editingOrderId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="card-retro bg-white w-full max-w-md p-5 space-y-4 animate-fade-in relative my-8">
+            <div className="flex justify-between items-center border-b-4 border-retro-dark border-dotted pb-3">
+              <h2 className="text-xl font-bold">✏️ Edit Detail Pesanan</h2>
+              <button 
+                onClick={() => { cancelEdit(); setIsFormOpen(false); }}
+                className="bg-red-500 text-white font-bold text-xs px-2.5 py-1 border-2 border-retro-dark rounded-md shadow-retro-sm active:translate-y-0.5 active:shadow-none cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              <div>
+                <label className="block text-sm font-bold mb-2">Nama Pemesan</label>
+                <input type="text" className="input-retro" placeholder="Misal: Kak Sarah" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Nomor WhatsApp</label>
+                <input type="text" className="input-retro" placeholder="Misal: 08123456789" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} />
+              </div>
+
+              <div className="pt-4 border-t-4 border-retro-dark border-dotted mt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <label className="block text-sm font-bold">Detail Box (Isi 8)</label>
+                  <button onClick={addBox} className="bg-retro-orange text-retro-dark text-xs font-bold px-3 py-2 border-2 border-retro-dark rounded-xl shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 transition-all">
+                    + Tambah Box
+                  </button>
+                </div>
+
+                {boxes.map((box, index) => {
+                  const customTotal = box.custom.cokelat + box.custom.keju + box.custom.tape;
+                  const isCustomValid = customTotal === 8;
+                  const sisaPcs = 8 - customTotal;
+
+                  return (
+                    <div key={box.id} className="mb-4 p-4 bg-retro-bg border-2 border-retro-dark rounded-xl shadow-retro-sm transition-all duration-300">
+                      <div className="flex justify-between items-center mb-3">
+                        <p className="text-sm font-bold">Box {index + 1}</p>
+                        {boxes.length > 1 && (
+                          <button onClick={() => removeBox(box.id)} className="text-[10px] font-bold text-white bg-red-500 px-2 py-1 border-[1.5px] border-retro-dark rounded-md shadow-[2px_2px_0px_0px_#2B2A2A] active:translate-y-0.5 active:shadow-none">Hapus</button>
+                        )}
+                      </div>
+
+                      <RetroSelect
+                        options={flavorOptions}
+                        value={box.flavor}
+                        onChange={(val) => updateBoxFlavor(box.id, val)}
+                      />
+
+                      {box.flavor === 'Custom (Pilih Sendiri)' && (
+                        <div className="mt-3 p-3 bg-white border-2 border-retro-dark rounded-xl animate-fade-in">
+                          <p className="text-xs font-bold mb-2 text-gray-600">Berapa pcs tiap rasa? (Sisa: {sisaPcs})</p>
+                          <div className="flex gap-2">
+                            <RetroNumberInput label="Cokelat" value={box.custom.cokelat} onChange={(e) => updateCustomQty(box.id, 'cokelat', e.target.value)} />
+                            <RetroNumberInput label="Keju" value={box.custom.keju} onChange={(e) => updateCustomQty(box.id, 'keju', e.target.value)} />
+                            <RetroNumberInput label="Tape" value={box.custom.tape} onChange={(e) => updateCustomQty(box.id, 'tape', e.target.value)} />
+                          </div>
+
+                          <div className="mt-3 text-center">
+                            {isCustomValid ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md border border-green-600">Pas 8 pcs! ✓</span> : <span className="text-xs font-bold text-red-500 bg-red-100 px-2 py-1 rounded-md border border-red-500">Masih kurang {sisaPcs} pcs lagi</span>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Metode Penerimaan</label>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => { setDeliveryMethod('pickup'); setCustomerAddress('Ambil Sendiri (Ruko TwinsDelight, Jl. Delis No. 12, Jakarta)'); }}
+                    className={`py-2 px-3 text-xs font-bold border-2 border-retro-dark rounded-xl transition-all cursor-pointer shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 ${deliveryMethod === 'pickup' ? 'bg-retro-orange text-retro-dark' : 'bg-white text-retro-dark hover:bg-retro-bg'}`}
+                  >
+                    🛍️ Ambil Sendiri
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDeliveryMethod('delivery'); setCustomerAddress(''); }}
+                    className={`py-2 px-3 text-xs font-bold border-2 border-retro-dark rounded-xl transition-all cursor-pointer shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 ${deliveryMethod === 'delivery' ? 'bg-retro-orange text-retro-dark' : 'bg-white text-retro-dark hover:bg-retro-bg'}`}
+                  >
+                    🚚 Pengantaran
+                  </button>
+                </div>
+
+                {deliveryMethod === 'pickup' ? (
+                  <div className="bg-retro-bg p-3 border-2 border-retro-dark rounded-xl text-xs font-bold animate-fade-in">
+                    <p className="text-retro-blue mb-1">📍 Alamat Pengambilan TwinsDelight:</p>
+                    <p className="text-gray-700 font-semibold leading-relaxed">Ruko TwinsDelight, Jl. Delis No. 12, Jakarta</p>
+                  </div>
+                ) : (
+                  <div className="animate-fade-in">
+                    <label className="block text-xs font-bold mb-1.5 text-gray-600">Alamat Pengiriman</label>
+                    <textarea 
+                      className="input-retro min-h-[70px] py-2 resize-none" 
+                      placeholder="Masukkan alamat pengiriman lengkap" 
+                      value={customerAddress.startsWith('Ambil Sendiri') ? '' : customerAddress} 
+                      onChange={(e) => setCustomerAddress(e.target.value)} 
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Tanggal Pengambilan</label>
+                <RetroDatePicker value={orderDate} onChange={(date) => setOrderDate(date)} />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 pt-2 border-t-2 border-retro-dark border-dashed">
+              <button
+                onClick={handleSaveOrder}
+                disabled={!isFormValid}
+                className={`flex-1 text-lg transition-all duration-300 cursor-pointer ${
+                  isFormValid 
+                    ? 'btn-retro-primary bg-retro-blue text-white' 
+                    : 'bg-gray-300 text-gray-500 font-bold py-3 px-6 border-2 border-gray-400 rounded-xl cursor-not-allowed shadow-[inset_2px_2px_4px_rgba(0,0,0,0.1)]'
+                }`}
+              >
+                Simpan Perubahan
+              </button>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="bg-retro-orange text-retro-dark text-lg font-bold py-3 px-4 border-2 border-retro-dark rounded-xl shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL DETAIL PESANAN — tampil dari manapun ===== */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="card-retro bg-white w-full max-w-sm p-5 space-y-4 animate-fade-in">
+            <div className="flex justify-between items-center border-b-4 border-retro-dark border-dotted pb-3">
+              <div>
+                <h3 className="text-lg font-bold">{selectedOrder.name}</h3>
+                <p className="text-xs text-gray-500 font-bold">{selectedOrder.id} • {selectedOrder.date}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedOrder(null)}
+                className="bg-red-500 text-white font-bold text-xs px-2.5 py-1 border-2 border-retro-dark rounded-md shadow-retro-sm active:translate-y-0.5 active:shadow-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {selectedOrder.address && (
+              <div className="bg-retro-bg p-3 border-2 border-retro-dark rounded-xl text-xs font-bold leading-normal">
+                <p className="text-retro-blue mb-1">Alamat Pengiriman</p>
+                <p className="text-gray-700 font-semibold">📍 {selectedOrder.address}</p>
+              </div>
+            )}
+
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+              {selectedOrder.boxesDetail.map((box, idx) => (
+                <div key={idx} className="bg-retro-bg p-3 border-2 border-retro-dark rounded-xl text-xs font-bold">
+                  <p className="text-retro-blue mb-1">Box {idx + 1}</p>
+                  {box.flavor === 'Custom (Pilih Sendiri)' && box.custom ? (
+                    <div>
+                      <p className="font-bold text-retro-dark">Custom:</p>
+                      <ul className="list-disc list-inside text-gray-600 font-semibold mt-1 space-y-0.5">
+                        {box.custom.cokelat > 0 && <li>Cokelat: {box.custom.cokelat} pcs</li>}
+                        {box.custom.keju > 0 && <li>Keju: {box.custom.keju} pcs</li>}
+                        {box.custom.tape > 0 && <li>Tape: {box.custom.tape} pcs</li>}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="text-gray-700">{box.flavor}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button onClick={() => setSelectedOrder(null)} className="btn-retro-primary w-full text-sm py-2">
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
       {showLoginModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="card-retro bg-white w-full max-w-sm p-6 space-y-4 relative">
