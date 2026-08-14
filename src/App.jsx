@@ -6,10 +6,15 @@ import RetroNumberInput from './components/ui/RetroNumberInput';
 import AdminDashboard from './pages/AdminDashboard';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
 // Inisialisasi client hanya jika kredensial telah diset dan bukan placeholder
-const isSupabaseConfigured = supabaseUrl && supabaseUrl !== 'https://your-project-ref.supabase.co' && supabaseAnonKey && supabaseAnonKey !== 'your-anon-key-here';
+const isSupabaseConfigured = 
+  supabaseUrl && 
+  supabaseUrl !== 'https://your-project-ref.supabase.co' && 
+  supabaseAnonKey && 
+  supabaseAnonKey !== 'your-anon-key-here' && 
+  supabaseAnonKey !== 'your-publishable-key-here';
 
 const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
