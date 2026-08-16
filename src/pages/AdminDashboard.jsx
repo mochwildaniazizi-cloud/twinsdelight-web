@@ -26,14 +26,14 @@ export default function AdminDashboard({
   return (
     <div className="w-full max-w-4xl space-y-6 pb-20 animate-fade-in">
       {/* HEADER FOR ADMIN */}
-      <header className="card-retro p-4 relative flex flex-col sm:flex-row justify-center items-center gap-3">
+      <header className="card-retro p-4 relative flex flex-col sm:flex-row items-center justify-center gap-3">
         <div className="flex justify-center items-center select-none w-full">
           <img src="/TwinsDelight-Logo.png" alt="TwinsDelight Logo" className="w-80 h-40 object-contain animate-fade-in" />
         </div>
         
         <button
           onClick={handleLogout}
-          className="sm:absolute sm:right-6 sm:top-1/2 sm:-translate-y-1/2 px-3.5 py-1.5 bg-red-500 text-white text-xs font-black rounded-lg border-2 border-retro-dark shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 transition-all cursor-pointer select-none"
+          className="sm:absolute sm:right-6 sm:top-6 px-3.5 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-black rounded-xl border-2 border-retro-dark shadow-retro-sm hover:-translate-y-0.5 hover:shadow-retro-md active:translate-y-0.5 active:shadow-retro-sm transition-all duration-150 cursor-pointer select-none flex items-center gap-1.5"
         >
           🚪 Keluar Admin
         </button>

@@ -696,22 +696,10 @@ Mohon segera diproses ya, terima kasih!`;
       ) : (
         <div className="w-full max-w-4xl space-y-6 pb-20">
           {/* HEADER FOR BUYER */}
-          <header className="card-retro p-4 relative flex flex-col sm:flex-row justify-center items-center gap-3">
+          <header className="card-retro p-4 flex justify-center items-center">
             <div className="flex justify-center items-center select-none w-full">
               <img src="/TwinsDelight-Logo.png" alt="TwinsDelight Logo" className="w-80 h-40 object-contain animate-fade-in" />
             </div>
-            
-            {isLoggedIn && (
-              <button
-                onClick={() => {
-                  setUserRole('seller');
-                  window.history.pushState({}, '', '/admin');
-                }}
-                className="sm:absolute sm:right-6 sm:top-1/2 sm:-translate-y-1/2 px-3.5 py-1.5 bg-retro-orange text-retro-dark text-xs font-black rounded-lg border-2 border-retro-dark shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 transition-all cursor-pointer select-none"
-              >
-                ⚙️ Dashboard
-              </button>
-            )}
           </header>
 
           {/* BUYER MODE: SUCCESS CONFIRMATION SCREEN */}
