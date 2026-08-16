@@ -8,8 +8,8 @@ export default {
     extend: {
       colors: {
         retro: {
-          bg: '#FFF3D4',       // krem kuning hangat — kertas nota retro
-          card: '#FFFBF0',     // krem terang untuk card
+          bg: '#F0F4FA',       // biru sangat muda nyaris putih
+          card: '#F8FAFD',     // biru pastel sangat soft untuk card
           orange: '#FEB05D',   
           blue: '#5A7ACD',     
           dark: '#2B2A2A',     

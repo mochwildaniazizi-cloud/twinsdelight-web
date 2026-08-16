@@ -28,10 +28,10 @@ const flavorOptions = [
   { value: 'Keju (8 pcs)', label: '🧀 Keju (8 pcs) — Rp 40k' },
   { value: 'Cokelat Keju (8 pcs)', label: '🍫🧀 Cokelat Keju (8 pcs) — Rp 45k' },
   { value: 'Tape (8 pcs)', label: '🍌 Tape (8 pcs) — Rp 40k' },
-  { value: 'Box Mix (4 pcs)', label: '🎁 Box Mix (4 pcs, 2 rasa) — Rp 40k' },
+  { value: 'Box Mix (8 pcs)', label: '🎁 Box Mix (8 pcs, 2 rasa) — Rp 40k' },
 ];
 
-// Pilihan rasa untuk Box Mix (2 pcs per rasa)
+// Pilihan rasa untuk Box Mix (4 pcs per rasa)
 const mixFlavorOptions = [
   { value: 'Cokelat', label: '🍫 Cokelat' },
   { value: 'Keju', label: '🧀 Keju' },
@@ -42,7 +42,7 @@ const mixFlavorOptions = [
 // Hitung harga per box
 const getBoxPrice = (flavor, mix = {}) => {
   if (flavor === 'Cokelat Keju (8 pcs)') return 45000;
-  if (flavor === 'Box Mix (4 pcs)') {
+  if (flavor && flavor.startsWith('Box Mix')) {
     // Box Mix 45k jika salah satu rasa mengandung Cokelat Keju
     if (mix.flavor1 === 'Cokelat Keju' || mix.flavor2 === 'Cokelat Keju') return 45000;
     return 40000;
@@ -62,7 +62,7 @@ const initialMockData = [
     status: 'Menunggu',
     boxesDetail: [
       { flavor: 'Cokelat (8 pcs)' },
-      { flavor: 'Box Mix (4 pcs)', mix: { flavor1: 'Keju', flavor2: 'Tape' } }
+      { flavor: 'Box Mix (8 pcs)', mix: { flavor1: 'Keju', flavor2: 'Tape' } }
     ]
   }
 ];
@@ -254,7 +254,7 @@ function App() {
                       customerAddress.trim() !== '' && 
                       orderDate !== '' && 
                       boxes.every(box => 
-                        box.flavor === 'Box Mix (4 pcs)' ? (box.mix?.flavor1 && box.mix?.flavor2 && box.mix?.flavor1 !== box.mix?.flavor2) : true
+                        box.flavor?.startsWith('Box Mix') ? (box.mix?.flavor1 && box.mix?.flavor2 && box.mix?.flavor1 !== box.mix?.flavor2) : true
                       );
 
   const handleSaveOrder = async () => {
@@ -262,7 +262,7 @@ function App() {
 
     const updatedBoxesDetail = boxes.map(b => ({
       flavor: b.flavor,
-      mix: b.flavor === 'Box Mix (4 pcs)' ? { ...b.mix } : null
+      mix: b.flavor?.startsWith('Box Mix') ? { ...b.mix } : null
     }));
 
     if (editingOrderId) {
@@ -546,13 +546,14 @@ function App() {
           else if (box.flavor === 'Keju (8 pcs)') { keju += 8; totalPcs += 8; }
           else if (box.flavor === 'Cokelat Keju (8 pcs)') { coklatKeju += 8; totalPcs += 8; }
           else if (box.flavor === 'Tape (8 pcs)') { tape += 8; totalPcs += 8; }
-          else if (box.flavor === 'Box Mix (4 pcs)' && box.mix) {
-            totalPcs += 4;
+          else if (box.flavor && box.flavor.startsWith('Box Mix') && box.mix) {
+            const pcsPerFlavor = box.flavor.includes('4 pcs') ? 2 : 4;
+            totalPcs += pcsPerFlavor * 2;
             const addMixFlavor = (fl) => {
-              if (fl === 'Cokelat') cokelat += 2;
-              else if (fl === 'Keju') keju += 2;
-              else if (fl === 'Cokelat Keju') coklatKeju += 2;
-              else if (fl === 'Tape') tape += 2;
+              if (fl === 'Cokelat') cokelat += pcsPerFlavor;
+              else if (fl === 'Keju') keju += pcsPerFlavor;
+              else if (fl === 'Cokelat Keju') coklatKeju += pcsPerFlavor;
+              else if (fl === 'Tape') tape += pcsPerFlavor;
             };
             addMixFlavor(box.mix.flavor1);
             addMixFlavor(box.mix.flavor2);
@@ -582,8 +583,9 @@ function App() {
       <div className="text-[11px] text-gray-500 font-semibold space-y-1 leading-tight">
         {boxesDetail.map((box, i) => {
           let label = box.flavor;
-          if (box.flavor === 'Box Mix (4 pcs)' && box.mix) {
-            label = `Box Mix: ${box.mix.flavor1} & ${box.mix.flavor2} (2+2 pcs)`;
+          if (box.flavor && box.flavor.startsWith('Box Mix') && box.mix) {
+            const countStr = box.flavor.includes('4 pcs') ? '2+2 pcs' : '4+4 pcs';
+            label = `Box Mix: ${box.mix.flavor1} & ${box.mix.flavor2} (${countStr})`;
           } else if (box.flavor === 'Custom (Pilih Sendiri)' && box.custom) {
             // backward compat
             const parts = [];
@@ -598,7 +600,7 @@ function App() {
           else if (box.flavor === 'Keju (8 pcs)') emoji = '🧀';
           else if (box.flavor === 'Cokelat Keju (8 pcs)') emoji = '🍫🧀';
           else if (box.flavor === 'Tape (8 pcs)') emoji = '🍌';
-          else if (box.flavor === 'Box Mix (4 pcs)') emoji = '🎁';
+          else if (box.flavor && box.flavor.startsWith('Box Mix')) emoji = '🎁';
           else if (box.flavor === 'Mix (4 Cokelat, 4 Keju)') emoji = '🍰'; // backward compat
           else if (box.flavor === 'Custom (Pilih Sendiri)') emoji = '⚙️'; // backward compat
 
@@ -652,8 +654,9 @@ _TwinsDelight Dashboard_`;
 
 *Rincian Rasa:*
 ${newOrder.boxesDetail.map((box, i) => {
-  if (box.flavor === 'Box Mix (4 pcs)' && box.mix) {
-    return `- Box ${i+1}: 🎁 Box Mix (${box.mix.flavor1} & ${box.mix.flavor2}, 2+2 pcs) — Rp ${(getBoxPrice(box.flavor, box.mix)/1000).toFixed(0)}k`;
+  if (box.flavor && box.flavor.startsWith('Box Mix') && box.mix) {
+    const countStr = box.flavor.includes('4 pcs') ? '2+2 pcs' : '4+4 pcs';
+    return `- Box ${i+1}: 🎁 Box Mix (${box.mix.flavor1} & ${box.mix.flavor2}, ${countStr}) — Rp ${(getBoxPrice(box.flavor, box.mix)/1000).toFixed(0)}k`;
   }
   return `- Box ${i+1}: ${box.flavor} — Rp ${(getBoxPrice(box.flavor)/1000).toFixed(0)}k`;
 }).join('\n')}
@@ -885,11 +888,11 @@ Mohon segera diproses ya, terima kasih!`;
                             onChange={(val) => updateBoxFlavor(box.id, val)}
                           />
 
-                          {box.flavor === 'Box Mix (4 pcs)' && (
+                          {box.flavor && box.flavor.startsWith('Box Mix') && (
                             <div className="mt-3 p-3 bg-white border-2 border-retro-dark rounded-xl animate-fade-in space-y-2">
-                              <p className="text-xs font-bold text-gray-600">Pilih 2 rasa berbeda (masing-masing 2 pcs):</p>
+                              <p className="text-xs font-bold text-gray-600">Pilih 2 rasa berbeda (masing-masing 4 pcs):</p>
                               <div>
-                                <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 1</label>
+                                <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 1 (4 pcs)</label>
                                 <RetroSelect
                                   options={mixFlavorOptions}
                                   value={box.mix?.flavor1 || 'Cokelat'}
@@ -897,7 +900,7 @@ Mohon segera diproses ya, terima kasih!`;
                                 />
                               </div>
                               <div>
-                                <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 2</label>
+                                <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 2 (4 pcs)</label>
                                 <RetroSelect
                                   options={mixFlavorOptions.filter(o => o.value !== (box.mix?.flavor1 || 'Cokelat'))}
                                   value={box.mix?.flavor2 || 'Keju'}
@@ -906,7 +909,7 @@ Mohon segera diproses ya, terima kasih!`;
                               </div>
                               <div className="mt-2 text-center">
                                 {isMixValid
-                                  ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md border border-green-600">✓ {box.mix.flavor1} & {box.mix.flavor2}</span>
+                                  ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md border border-green-600">✓ 4 pcs {box.mix.flavor1} + 4 pcs {box.mix.flavor2}</span>
                                   : <span className="text-xs font-bold text-red-500 bg-red-100 px-2 py-1 rounded-md border border-red-500">Pilih 2 rasa berbeda</span>
                                 }
                               </div>
@@ -1134,11 +1137,11 @@ Mohon segera diproses ya, terima kasih!`;
                         onChange={(val) => updateBoxFlavor(box.id, val)}
                       />
 
-                      {box.flavor === 'Box Mix (4 pcs)' && (
+                      {box.flavor && box.flavor.startsWith('Box Mix') && (
                         <div className="mt-3 p-3 bg-white border-2 border-retro-dark rounded-xl animate-fade-in space-y-2">
-                          <p className="text-xs font-bold text-gray-600">Pilih 2 rasa berbeda (masing-masing 2 pcs):</p>
+                          <p className="text-xs font-bold text-gray-600">Pilih 2 rasa berbeda (masing-masing 4 pcs):</p>
                           <div>
-                            <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 1</label>
+                            <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 1 (4 pcs)</label>
                             <RetroSelect
                               options={mixFlavorOptions}
                               value={box.mix?.flavor1 || 'Cokelat'}
@@ -1146,7 +1149,7 @@ Mohon segera diproses ya, terima kasih!`;
                             />
                           </div>
                           <div>
-                            <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 2</label>
+                            <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 2 (4 pcs)</label>
                             <RetroSelect
                               options={mixFlavorOptions.filter(o => o.value !== (box.mix?.flavor1 || 'Cokelat'))}
                               value={box.mix?.flavor2 || 'Keju'}
@@ -1155,7 +1158,7 @@ Mohon segera diproses ya, terima kasih!`;
                           </div>
                           <div className="mt-2 text-center">
                             {isMixValid
-                              ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md border border-green-600">✓ {box.mix.flavor1} & {box.mix.flavor2}</span>
+                              ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md border border-green-600">✓ 4 pcs {box.mix.flavor1} + 4 pcs {box.mix.flavor2}</span>
                               : <span className="text-xs font-bold text-red-500 bg-red-100 px-2 py-1 rounded-md border border-red-500">Pilih 2 rasa berbeda</span>
                             }
                           </div>
