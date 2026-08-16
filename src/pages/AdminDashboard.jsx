@@ -119,18 +119,28 @@ export default function AdminDashboard({
               </div>
               <div className="card-retro p-4 col-span-2 flex justify-around">
                 <div className="text-center">
-                  <p className="text-xs font-bold text-gray-500">Cokelat</p>
+                  <p className="text-xs font-bold text-gray-500">🍫 Cokelat</p>
                   <p className="font-bold text-xl">{totals.cokelat}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs font-bold text-gray-500">Keju</p>
+                  <p className="text-xs font-bold text-gray-500">🧀 Keju</p>
                   <p className="font-bold text-xl">{totals.keju}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs font-bold text-gray-500">Tape</p>
+                  <p className="text-xs font-bold text-gray-500">🍫🧀 Ck.Keju</p>
+                  <p className="font-bold text-xl">{totals.coklatKeju}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-bold text-gray-500">🍌 Tape</p>
                   <p className="font-bold text-xl">{totals.tape}</p>
                 </div>
               </div>
+              {totals.totalHarga > 0 && (
+                <div className="card-retro p-3 col-span-2 bg-retro-blue text-white flex justify-between items-center">
+                  <span className="text-sm font-bold">💰 Est. Omzet</span>
+                  <span className="text-xl font-black">Rp {(totals.totalHarga / 1000).toFixed(0)}k</span>
+                </div>
+              )}
             </div>
           </section>
 
@@ -190,7 +200,7 @@ export default function AdminDashboard({
                         <span className="text-[10px] font-bold text-gray-400 block mb-1 uppercase select-none">Metode & Alamat:</span>
                         <span className="font-semibold text-gray-600">
                           {order.address.startsWith('Ambil Sendiri') 
-                            ? '🛍️ Ambil Sendiri (Ruko TwinsDelight, Jl. Delis No. 12, Jakarta)' 
+                            ? '🛍️ Ambil Sendiri (TwinsDelight, Jl. Danau Sentani Utara II, Madyopuro, Kec. Kedungkandang, Kota Malang, Jawa Timur H3D19)' 
                             : `🚚 Pengantaran: ${order.address}`}
                         </span>
                       </div>

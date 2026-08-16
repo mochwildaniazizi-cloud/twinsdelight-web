@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import RetroSelect from './components/ui/RetroSelect';
 import RetroDatePicker from './components/ui/RetroDatePicker';
-import RetroNumberInput from './components/ui/RetroNumberInput';
 import AdminDashboard from './pages/AdminDashboard';
 import ToastContainer from './components/ui/Toast';
 import { useToast } from './hooks/useToast';
@@ -25,12 +24,31 @@ const isSupabaseConfigured =
 const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 const flavorOptions = [
-  { value: 'Cokelat (8 pcs)', label: 'Cokelat (8 pcs)' },
-  { value: 'Keju (8 pcs)', label: 'Keju (8 pcs)' },
-  { value: 'Mix (4 Cokelat, 4 Keju)', label: 'Mix (4 Cokelat, 4 Keju)' },
-  { value: 'Tape (8 pcs)', label: 'Tape (8 pcs)' },
-  { value: 'Custom (Pilih Sendiri)', label: 'Custom (Pilih Sendiri)' }
+  { value: 'Cokelat (8 pcs)', label: '🍫 Cokelat (8 pcs) — Rp 40k' },
+  { value: 'Keju (8 pcs)', label: '🧀 Keju (8 pcs) — Rp 40k' },
+  { value: 'Cokelat Keju (8 pcs)', label: '🍫🧀 Cokelat Keju (8 pcs) — Rp 45k' },
+  { value: 'Tape (8 pcs)', label: '🍌 Tape (8 pcs) — Rp 40k' },
+  { value: 'Box Mix (4 pcs)', label: '🎁 Box Mix (4 pcs, 2 rasa) — Rp 40k' },
 ];
+
+// Pilihan rasa untuk Box Mix (2 pcs per rasa)
+const mixFlavorOptions = [
+  { value: 'Cokelat', label: '🍫 Cokelat' },
+  { value: 'Keju', label: '🧀 Keju' },
+  { value: 'Cokelat Keju', label: '🍫🧀 Cokelat Keju' },
+  { value: 'Tape', label: '🍌 Tape' },
+];
+
+// Hitung harga per box
+const getBoxPrice = (flavor, mix = {}) => {
+  if (flavor === 'Cokelat Keju (8 pcs)') return 45000;
+  if (flavor === 'Box Mix (4 pcs)') {
+    // Box Mix 45k jika salah satu rasa mengandung Cokelat Keju
+    if (mix.flavor1 === 'Cokelat Keju' || mix.flavor2 === 'Cokelat Keju') return 45000;
+    return 40000;
+  }
+  return 40000;
+};
 
 
 // Data awal sebagai contoh jika LocalStorage masih kosong
@@ -43,8 +61,8 @@ const initialMockData = [
     totalBoxes: 2,
     status: 'Menunggu',
     boxesDetail: [
-      { flavor: 'Mix (4 Cokelat, 4 Keju)' },
-      { flavor: 'Custom (Pilih Sendiri)', custom: { cokelat: 3, keju: 3, tape: 2 } }
+      { flavor: 'Cokelat (8 pcs)' },
+      { flavor: 'Box Mix (4 pcs)', mix: { flavor1: 'Keju', flavor2: 'Tape' } }
     ]
   }
 ];
@@ -53,7 +71,7 @@ const initialMockData = [
 function App() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [customerAddress, setCustomerAddress] = useState('Ambil Sendiri (Ruko TwinsDelight, Jl. Delis No. 12, Jakarta)');
+  const [customerAddress, setCustomerAddress] = useState('Ambil Sendiri (TwinsDelight, Jl. Danau Sentani Utara II, Madyopuro, Kec. Kedungkandang, Kota Malang, Jawa Timur H3D19)');
   const [deliveryMethod, setDeliveryMethod] = useState('pickup'); // 'pickup' atau 'delivery'
   const [orderDate, setOrderDate] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -85,8 +103,8 @@ function App() {
   // State Form Box
   const [boxes, setBoxes] = useState([{ 
     id: Date.now(), 
-    flavor: 'Mix (4 Cokelat, 4 Keju)', 
-    custom: { cokelat: 0, keju: 0, tape: 0 } 
+    flavor: 'Cokelat (8 pcs)', 
+    mix: { flavor1: 'Cokelat', flavor2: 'Keju' } 
   }]);
 
   // State Orders: Membaca dari LocalStorage sebagai fallback awal sebelum fetching dari database
@@ -225,22 +243,10 @@ function App() {
   };
 
   // --- FUNGSI MANAJEMEN FORM BOX ---
-  const addBox = () => setBoxes([...boxes, { id: Date.now(), flavor: 'Cokelat (8 pcs)', custom: { cokelat: 0, keju: 0, tape: 0 } }]);
+  const addBox = () => setBoxes([...boxes, { id: Date.now(), flavor: 'Cokelat (8 pcs)', mix: { flavor1: 'Cokelat', flavor2: 'Keju' } }]);
   const removeBox = (id) => setBoxes(boxes.filter(box => box.id !== id));
   const updateBoxFlavor = (id, newFlavor) => setBoxes(boxes.map(box => box.id === id ? { ...box, flavor: newFlavor } : box));
-
-  const updateCustomQty = (id, type, value) => {
-    let numValue = parseInt(value) || 0; 
-    if (numValue < 0) numValue = 0;
-    setBoxes(boxes.map(box => {
-      if (box.id === id) {
-        const otherFlavorsTotal = (type === 'cokelat' ? 0 : box.custom.cokelat) + (type === 'keju' ? 0 : box.custom.keju) + (type === 'tape' ? 0 : box.custom.tape);
-        if (numValue + otherFlavorsTotal > 8) numValue = 8 - otherFlavorsTotal;
-        return { ...box, custom: { ...box.custom, [type]: numValue } };
-      }
-      return box;
-    }));
-  };
+  const updateMixFlavor = (id, field, value) => setBoxes(boxes.map(box => box.id === id ? { ...box, mix: { ...box.mix, [field]: value } } : box));
 
   // --- LOGIKA FORM VALIDATION & SAVE ORDER ---
   const isFormValid = customerName.trim() !== '' && 
@@ -248,7 +254,7 @@ function App() {
                       customerAddress.trim() !== '' && 
                       orderDate !== '' && 
                       boxes.every(box => 
-                        box.flavor === 'Custom (Pilih Sendiri)' ? (box.custom.cokelat + box.custom.keju + box.custom.tape) === 8 : true
+                        box.flavor === 'Box Mix (4 pcs)' ? (box.mix?.flavor1 && box.mix?.flavor2 && box.mix?.flavor1 !== box.mix?.flavor2) : true
                       );
 
   const handleSaveOrder = async () => {
@@ -256,7 +262,7 @@ function App() {
 
     const updatedBoxesDetail = boxes.map(b => ({
       flavor: b.flavor,
-      custom: b.flavor === 'Custom (Pilih Sendiri)' ? { ...b.custom } : null
+      mix: b.flavor === 'Box Mix (4 pcs)' ? { ...b.mix } : null
     }));
 
     if (editingOrderId) {
@@ -361,10 +367,10 @@ function App() {
     // Reset Form Input
     setCustomerName('');
     setCustomerPhone('');
-    setCustomerAddress('Ambil Sendiri (Ruko TwinsDelight, Jl. Delis No. 12, Jakarta)');
+    setCustomerAddress('Ambil Sendiri (TwinsDelight, Jl. Danau Sentani Utara II, Madyopuro, Kec. Kedungkandang, Kota Malang, Jawa Timur H3D19)');
     setDeliveryMethod('pickup');
     setOrderDate('');
-    setBoxes([{ id: Date.now(), flavor: 'Mix (4 Cokelat, 4 Keju)', custom: { cokelat: 0, keju: 0, tape: 0 } }]);
+    setBoxes([{ id: Date.now(), flavor: 'Cokelat (8 pcs)', mix: { flavor1: 'Cokelat', flavor2: 'Keju' } }]);
     
     // Close Modal
     setIsFormOpen(false);
@@ -418,7 +424,7 @@ function App() {
     setBoxes(order.boxesDetail.map((b, idx) => ({
       id: Date.now() + idx,
       flavor: b.flavor,
-      custom: b.custom ? { ...b.custom } : { cokelat: 0, keju: 0, tape: 0 }
+      mix: b.mix ? { ...b.mix } : { flavor1: 'Cokelat', flavor2: 'Keju' }
     })));
     setIsFormOpen(true);
   };
@@ -427,10 +433,10 @@ function App() {
     setEditingOrderId(null);
     setCustomerName('');
     setCustomerPhone('');
-    setCustomerAddress('Ambil Sendiri (Ruko TwinsDelight, Jl. Delis No. 12, Jakarta)');
+    setCustomerAddress('Ambil Sendiri (TwinsDelight, Jl. Danau Sentani Utara II, Madyopuro, Kec. Kedungkandang, Kota Malang, Jawa Timur H3D19)');
     setDeliveryMethod('pickup');
     setOrderDate('');
-    setBoxes([{ id: Date.now(), flavor: 'Mix (4 Cokelat, 4 Keju)', custom: { cokelat: 0, keju: 0, tape: 0 } }]);
+    setBoxes([{ id: Date.now(), flavor: 'Cokelat (8 pcs)', mix: { flavor1: 'Cokelat', flavor2: 'Keju' } }]);
     setIsFormOpen(false);
   };
 
@@ -513,7 +519,9 @@ function App() {
   // --- FUNGSI KALKULATOR TOTAL BENTO GRID (DARI SELURUH PESANAN TERMASUK INPUTAN LIVE) ---
   const calculateTotals = () => {
     let totalBox = 0;
-    let cokelat = 0; let keju = 0; let tape = 0;
+    let totalPcs = 0;
+    let totalHarga = 0;
+    let cokelat = 0; let keju = 0; let coklatKeju = 0; let tape = 0;
 
     let targetDate = null;
     if (productionDateFilter === 'TODAY') targetDate = todayStr;
@@ -533,20 +541,36 @@ function App() {
       
       if (order.boxesDetail) {
         order.boxesDetail.forEach(box => {
-          if (box.flavor === 'Cokelat (8 pcs)') cokelat += 8;
-          else if (box.flavor === 'Keju (8 pcs)') keju += 8;
-          else if (box.flavor === 'Tape (8 pcs)') tape += 8;
-          else if (box.flavor === 'Mix (4 Cokelat, 4 Keju)') { cokelat += 4; keju += 4; }
+          totalHarga += getBoxPrice(box.flavor, box.mix);
+          if (box.flavor === 'Cokelat (8 pcs)') { cokelat += 8; totalPcs += 8; }
+          else if (box.flavor === 'Keju (8 pcs)') { keju += 8; totalPcs += 8; }
+          else if (box.flavor === 'Cokelat Keju (8 pcs)') { coklatKeju += 8; totalPcs += 8; }
+          else if (box.flavor === 'Tape (8 pcs)') { tape += 8; totalPcs += 8; }
+          else if (box.flavor === 'Box Mix (4 pcs)' && box.mix) {
+            totalPcs += 4;
+            const addMixFlavor = (fl) => {
+              if (fl === 'Cokelat') cokelat += 2;
+              else if (fl === 'Keju') keju += 2;
+              else if (fl === 'Cokelat Keju') coklatKeju += 2;
+              else if (fl === 'Tape') tape += 2;
+            };
+            addMixFlavor(box.mix.flavor1);
+            addMixFlavor(box.mix.flavor2);
+          }
+          // backward compat: old flavor names
+          else if (box.flavor === 'Mix (4 Cokelat, 4 Keju)') { cokelat += 4; keju += 4; totalPcs += 8; }
           else if (box.flavor === 'Custom (Pilih Sendiri)' && box.custom) {
-            cokelat += box.custom.cokelat;
-            keju += box.custom.keju;
-            tape += box.custom.tape;
+            const total = (box.custom.cokelat || 0) + (box.custom.keju || 0) + (box.custom.tape || 0);
+            cokelat += box.custom.cokelat || 0;
+            keju += box.custom.keju || 0;
+            tape += box.custom.tape || 0;
+            totalPcs += total;
           }
         });
       }
     });
 
-    return { totalBox, totalPcs: totalBox * 8, cokelat, keju, tape };
+    return { totalBox, totalPcs, totalHarga, cokelat, keju, coklatKeju, tape };
   };
 
   const getOrderFlavorSummary = (boxesDetail) => {
@@ -558,7 +582,10 @@ function App() {
       <div className="text-[11px] text-gray-500 font-semibold space-y-1 leading-tight">
         {boxesDetail.map((box, i) => {
           let label = box.flavor;
-          if (box.flavor === 'Custom (Pilih Sendiri)' && box.custom) {
+          if (box.flavor === 'Box Mix (4 pcs)' && box.mix) {
+            label = `Box Mix: ${box.mix.flavor1} & ${box.mix.flavor2} (2+2 pcs)`;
+          } else if (box.flavor === 'Custom (Pilih Sendiri)' && box.custom) {
+            // backward compat
             const parts = [];
             if (box.custom.cokelat > 0) parts.push(`Cokelat: ${box.custom.cokelat} pcs`);
             if (box.custom.keju > 0) parts.push(`Keju: ${box.custom.keju} pcs`);
@@ -569,9 +596,11 @@ function App() {
           let emoji = '📦';
           if (box.flavor === 'Cokelat (8 pcs)') emoji = '🍫';
           else if (box.flavor === 'Keju (8 pcs)') emoji = '🧀';
+          else if (box.flavor === 'Cokelat Keju (8 pcs)') emoji = '🍫🧀';
           else if (box.flavor === 'Tape (8 pcs)') emoji = '🍌';
-          else if (box.flavor === 'Mix (4 Cokelat, 4 Keju)') emoji = '🍰';
-          else if (box.flavor === 'Custom (Pilih Sendiri)') emoji = '⚙️';
+          else if (box.flavor === 'Box Mix (4 pcs)') emoji = '🎁';
+          else if (box.flavor === 'Mix (4 Cokelat, 4 Keju)') emoji = '🍰'; // backward compat
+          else if (box.flavor === 'Custom (Pilih Sendiri)') emoji = '⚙️'; // backward compat
 
           return (
             <div key={i} className="flex items-start gap-1">
@@ -597,10 +626,12 @@ function App() {
 📅 Tanggal: ${dateLabel}
 ----------------------------------------
 📦 Total: ${totals.totalBox} Box (${totals.totalPcs} pcs)
+💰 Total Omzet: Rp ${(totals.totalHarga / 1000).toFixed(0)}k
 
 Rincian Adonan:
 🍫 Cokelat: ${totals.cokelat} pcs
 🧀 Keju: ${totals.keju} pcs
+🍫🧀 Cokelat Keju: ${totals.coklatKeju} pcs
 🍌 Tape: ${totals.tape} pcs
 
 _TwinsDelight Dashboard_`;
@@ -621,16 +652,18 @@ _TwinsDelight Dashboard_`;
 
 *Rincian Rasa:*
 ${newOrder.boxesDetail.map((box, i) => {
-  if (box.flavor === 'Custom (Pilih Sendiri)' && box.custom) {
-    return `- Box ${i+1}: Custom (🍫 Cokelat: ${box.custom.cokelat}, 🧀 Keju: ${box.custom.keju}, 🍌 Tape: ${box.custom.tape})`;
+  if (box.flavor === 'Box Mix (4 pcs)' && box.mix) {
+    return `- Box ${i+1}: 🎁 Box Mix (${box.mix.flavor1} & ${box.mix.flavor2}, 2+2 pcs) — Rp ${(getBoxPrice(box.flavor, box.mix)/1000).toFixed(0)}k`;
   }
-  return `- Box ${i+1}: ${box.flavor}`;
+  return `- Box ${i+1}: ${box.flavor} — Rp ${(getBoxPrice(box.flavor)/1000).toFixed(0)}k`;
 }).join('\n')}
+
+💰 *Total Harga: Rp ${(newOrder.boxesDetail.reduce((sum, b) => sum + getBoxPrice(b.flavor, b.mix), 0) / 1000).toFixed(0)}k*
 
 Mohon segera diproses ya, terima kasih!`;
 
     const encodedTextUrl = encodeURIComponent(summaryText);
-    window.open(`https://wa.me/628123456789?text=${encodedTextUrl}`, '_blank');
+    window.open(`https://wa.me/6285646674868?text=${encodedTextUrl}`, '_blank');
   };
 
   return (
@@ -702,7 +735,7 @@ Mohon segera diproses ya, terima kasih!`;
                   <span className="text-gray-500">Alamat:</span>{' '}
                   <span className="font-bold">
                     {submittedOrder.address.startsWith('Ambil Sendiri') 
-                      ? 'Ruko TwinsDelight, Jl. Delis No. 12, Jakarta' 
+                      ? 'TwinsDelight, Jl. Danau Sentani Utara II, Madyopuro, Kec. Kedungkandang, Kota Malang, Jawa Timur H3D19' 
                       : submittedOrder.address}
                   </span>
                 </p>
@@ -827,21 +860,20 @@ Mohon segera diproses ya, terima kasih!`;
 
                   <div className="pt-4 border-t-4 border-retro-dark border-dotted mt-6">
                     <div className="flex justify-between items-center mb-4">
-                      <label className="block text-sm font-bold">Detail Box (Isi 8)</label>
+                      <label className="block text-sm font-bold">Detail Box</label>
                       <button onClick={addBox} className="bg-retro-orange text-retro-dark text-xs font-bold px-3 py-2 border-2 border-retro-dark rounded-xl shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 transition-all">
                         + Tambah Box
                       </button>
                     </div>
 
                     {boxes.map((box, index) => {
-                      const customTotal = box.custom.cokelat + box.custom.keju + box.custom.tape;
-                      const isCustomValid = customTotal === 8;
-                      const sisaPcs = 8 - customTotal; 
+                      const isMixValid = box.mix?.flavor1 && box.mix?.flavor2 && box.mix?.flavor1 !== box.mix?.flavor2;
+                      const boxPrice = getBoxPrice(box.flavor, box.mix);
 
                       return (
                         <div key={box.id} className="mb-4 p-4 bg-retro-bg border-2 border-retro-dark rounded-xl shadow-retro-sm transition-all duration-300">
                           <div className="flex justify-between items-center mb-3">
-                            <p className="text-sm font-bold">Box {index + 1}</p>
+                            <p className="text-sm font-bold">Box {index + 1} <span className="text-xs font-semibold text-retro-blue">— Rp {(boxPrice/1000).toFixed(0)}k</span></p>
                             {boxes.length > 1 && (
                               <button onClick={() => removeBox(box.id)} className="text-[10px] font-bold text-white bg-red-500 px-2 py-1 border-[1.5px] border-retro-dark rounded-md shadow-[2px_2px_0px_0px_#2B2A2A] active:translate-y-0.5 active:shadow-none">Hapus</button>
                             )}
@@ -853,17 +885,30 @@ Mohon segera diproses ya, terima kasih!`;
                             onChange={(val) => updateBoxFlavor(box.id, val)}
                           />
 
-                          {box.flavor === 'Custom (Pilih Sendiri)' && (
-                            <div className="mt-3 p-3 bg-white border-2 border-retro-dark rounded-xl animate-fade-in">
-                              <p className="text-xs font-bold mb-2 text-gray-600">Berapa pcs tiap rasa? (Sisa: {sisaPcs})</p>
-                              <div className="flex gap-2">
-                                <RetroNumberInput label="Cokelat" value={box.custom.cokelat} onChange={(e) => updateCustomQty(box.id, 'cokelat', e.target.value)} />
-                                <RetroNumberInput label="Keju" value={box.custom.keju} onChange={(e) => updateCustomQty(box.id, 'keju', e.target.value)} />
-                                <RetroNumberInput label="Tape" value={box.custom.tape} onChange={(e) => updateCustomQty(box.id, 'tape', e.target.value)} />
+                          {box.flavor === 'Box Mix (4 pcs)' && (
+                            <div className="mt-3 p-3 bg-white border-2 border-retro-dark rounded-xl animate-fade-in space-y-2">
+                              <p className="text-xs font-bold text-gray-600">Pilih 2 rasa berbeda (masing-masing 2 pcs):</p>
+                              <div>
+                                <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 1</label>
+                                <RetroSelect
+                                  options={mixFlavorOptions}
+                                  value={box.mix?.flavor1 || 'Cokelat'}
+                                  onChange={(val) => updateMixFlavor(box.id, 'flavor1', val)}
+                                />
                               </div>
-
-                              <div className="mt-3 text-center">
-                                {isCustomValid ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md border border-green-600">Pas 8 pcs! ✓</span> : <span className="text-xs font-bold text-red-500 bg-red-100 px-2 py-1 rounded-md border border-red-500">Masih kurang {sisaPcs} pcs lagi</span>}
+                              <div>
+                                <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 2</label>
+                                <RetroSelect
+                                  options={mixFlavorOptions.filter(o => o.value !== (box.mix?.flavor1 || 'Cokelat'))}
+                                  value={box.mix?.flavor2 || 'Keju'}
+                                  onChange={(val) => updateMixFlavor(box.id, 'flavor2', val)}
+                                />
+                              </div>
+                              <div className="mt-2 text-center">
+                                {isMixValid
+                                  ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md border border-green-600">✓ {box.mix.flavor1} & {box.mix.flavor2}</span>
+                                  : <span className="text-xs font-bold text-red-500 bg-red-100 px-2 py-1 rounded-md border border-red-500">Pilih 2 rasa berbeda</span>
+                                }
                               </div>
                             </div>
                           )}
@@ -879,7 +924,7 @@ Mohon segera diproses ya, terima kasih!`;
                         type="button"
                         onClick={() => {
                           setDeliveryMethod('pickup');
-                          setCustomerAddress('Ambil Sendiri (Ruko TwinsDelight, Jl. Delis No. 12, Jakarta)');
+                          setCustomerAddress('Ambil Sendiri (TwinsDelight, Jl. Danau Sentani Utara II, Madyopuro, Kec. Kedungkandang, Kota Malang, Jawa Timur H3D19)');
                         }}
                         className={`py-2 px-3 text-xs font-bold border-2 border-retro-dark rounded-xl transition-all cursor-pointer shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 ${
                           deliveryMethod === 'pickup'
@@ -908,7 +953,7 @@ Mohon segera diproses ya, terima kasih!`;
                     {deliveryMethod === 'pickup' ? (
                       <div className="bg-retro-bg p-3 border-2 border-retro-dark rounded-xl text-xs font-bold animate-fade-in">
                         <p className="text-retro-blue mb-1">📍 Alamat Pengambilan TwinsDelight:</p>
-                        <p className="text-gray-700 font-semibold leading-relaxed">Ruko TwinsDelight, Jl. Delis No. 12, Jakarta</p>
+                        <p className="text-gray-700 font-semibold leading-relaxed">TwinsDelight, Jl. Danau Sentani Utara II, Madyopuro, Kec. Kedungkandang, Kota Malang, Jawa Timur H3D19</p>
                       </div>
                     ) : (
                       <div className="animate-fade-in">
@@ -928,7 +973,19 @@ Mohon segera diproses ya, terima kasih!`;
                     <RetroDatePicker value={orderDate} onChange={(date) => setOrderDate(date)} />
                   </div>
 
-                  
+                  {/* SUMMARY ESTIMASI HARGA */}
+                  <div className="bg-retro-orange/20 border-2 border-retro-dark p-3 rounded-xl flex justify-between items-center text-xs font-bold mt-4">
+                    <div>
+                      <span className="text-gray-600 block">Total Pesanan: {boxes.length} Box</span>
+                      <span className="text-[10px] text-gray-500 font-semibold">Harga final saat konfirmasi</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-gray-500 block">Estimasi Total</span>
+                      <span className="text-lg font-black text-retro-dark">
+                        Rp {(boxes.reduce((sum, b) => sum + getBoxPrice(b.flavor, b.mix), 0)).toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-6 pt-2 border-t-2 border-retro-dark border-dashed">
@@ -1052,21 +1109,20 @@ Mohon segera diproses ya, terima kasih!`;
 
               <div className="pt-4 border-t-4 border-retro-dark border-dotted mt-6">
                 <div className="flex justify-between items-center mb-4">
-                  <label className="block text-sm font-bold">Detail Box (Isi 8)</label>
+                  <label className="block text-sm font-bold">Detail Box</label>
                   <button onClick={addBox} className="bg-retro-orange text-retro-dark text-xs font-bold px-3 py-2 border-2 border-retro-dark rounded-xl shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 transition-all">
                     + Tambah Box
                   </button>
                 </div>
 
                 {boxes.map((box, index) => {
-                  const customTotal = box.custom.cokelat + box.custom.keju + box.custom.tape;
-                  const isCustomValid = customTotal === 8;
-                  const sisaPcs = 8 - customTotal;
+                  const isMixValid = box.mix?.flavor1 && box.mix?.flavor2 && box.mix?.flavor1 !== box.mix?.flavor2;
+                  const boxPrice = getBoxPrice(box.flavor, box.mix);
 
                   return (
                     <div key={box.id} className="mb-4 p-4 bg-retro-bg border-2 border-retro-dark rounded-xl shadow-retro-sm transition-all duration-300">
                       <div className="flex justify-between items-center mb-3">
-                        <p className="text-sm font-bold">Box {index + 1}</p>
+                        <p className="text-sm font-bold">Box {index + 1} <span className="text-xs font-semibold text-retro-blue">— Rp {(boxPrice/1000).toFixed(0)}k</span></p>
                         {boxes.length > 1 && (
                           <button onClick={() => removeBox(box.id)} className="text-[10px] font-bold text-white bg-red-500 px-2 py-1 border-[1.5px] border-retro-dark rounded-md shadow-[2px_2px_0px_0px_#2B2A2A] active:translate-y-0.5 active:shadow-none">Hapus</button>
                         )}
@@ -1078,17 +1134,30 @@ Mohon segera diproses ya, terima kasih!`;
                         onChange={(val) => updateBoxFlavor(box.id, val)}
                       />
 
-                      {box.flavor === 'Custom (Pilih Sendiri)' && (
-                        <div className="mt-3 p-3 bg-white border-2 border-retro-dark rounded-xl animate-fade-in">
-                          <p className="text-xs font-bold mb-2 text-gray-600">Berapa pcs tiap rasa? (Sisa: {sisaPcs})</p>
-                          <div className="flex gap-2">
-                            <RetroNumberInput label="Cokelat" value={box.custom.cokelat} onChange={(e) => updateCustomQty(box.id, 'cokelat', e.target.value)} />
-                            <RetroNumberInput label="Keju" value={box.custom.keju} onChange={(e) => updateCustomQty(box.id, 'keju', e.target.value)} />
-                            <RetroNumberInput label="Tape" value={box.custom.tape} onChange={(e) => updateCustomQty(box.id, 'tape', e.target.value)} />
+                      {box.flavor === 'Box Mix (4 pcs)' && (
+                        <div className="mt-3 p-3 bg-white border-2 border-retro-dark rounded-xl animate-fade-in space-y-2">
+                          <p className="text-xs font-bold text-gray-600">Pilih 2 rasa berbeda (masing-masing 2 pcs):</p>
+                          <div>
+                            <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 1</label>
+                            <RetroSelect
+                              options={mixFlavorOptions}
+                              value={box.mix?.flavor1 || 'Cokelat'}
+                              onChange={(val) => updateMixFlavor(box.id, 'flavor1', val)}
+                            />
                           </div>
-
-                          <div className="mt-3 text-center">
-                            {isCustomValid ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md border border-green-600">Pas 8 pcs! ✓</span> : <span className="text-xs font-bold text-red-500 bg-red-100 px-2 py-1 rounded-md border border-red-500">Masih kurang {sisaPcs} pcs lagi</span>}
+                          <div>
+                            <label className="text-[11px] font-bold text-gray-500 mb-1 block">Rasa 2</label>
+                            <RetroSelect
+                              options={mixFlavorOptions.filter(o => o.value !== (box.mix?.flavor1 || 'Cokelat'))}
+                              value={box.mix?.flavor2 || 'Keju'}
+                              onChange={(val) => updateMixFlavor(box.id, 'flavor2', val)}
+                            />
+                          </div>
+                          <div className="mt-2 text-center">
+                            {isMixValid
+                              ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-md border border-green-600">✓ {box.mix.flavor1} & {box.mix.flavor2}</span>
+                              : <span className="text-xs font-bold text-red-500 bg-red-100 px-2 py-1 rounded-md border border-red-500">Pilih 2 rasa berbeda</span>
+                            }
                           </div>
                         </div>
                       )}
@@ -1102,7 +1171,7 @@ Mohon segera diproses ya, terima kasih!`;
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <button
                     type="button"
-                    onClick={() => { setDeliveryMethod('pickup'); setCustomerAddress('Ambil Sendiri (Ruko TwinsDelight, Jl. Delis No. 12, Jakarta)'); }}
+                    onClick={() => { setDeliveryMethod('pickup'); setCustomerAddress('Ambil Sendiri (TwinsDelight, Jl. Danau Sentani Utara II, Madyopuro, Kec. Kedungkandang, Kota Malang, Jawa Timur H3D19)'); }}
                     className={`py-2 px-3 text-xs font-bold border-2 border-retro-dark rounded-xl transition-all cursor-pointer shadow-retro-sm hover:translate-y-0.5 active:translate-y-1 ${deliveryMethod === 'pickup' ? 'bg-retro-orange text-retro-dark' : 'bg-white text-retro-dark hover:bg-retro-bg'}`}
                   >
                     🛍️ Ambil Sendiri
@@ -1119,7 +1188,7 @@ Mohon segera diproses ya, terima kasih!`;
                 {deliveryMethod === 'pickup' ? (
                   <div className="bg-retro-bg p-3 border-2 border-retro-dark rounded-xl text-xs font-bold animate-fade-in">
                     <p className="text-retro-blue mb-1">📍 Alamat Pengambilan TwinsDelight:</p>
-                    <p className="text-gray-700 font-semibold leading-relaxed">Ruko TwinsDelight, Jl. Delis No. 12, Jakarta</p>
+                    <p className="text-gray-700 font-semibold leading-relaxed">TwinsDelight, Jl. Danau Sentani Utara II, Madyopuro, Kec. Kedungkandang, Kota Malang, Jawa Timur H3D19</p>
                   </div>
                 ) : (
                   <div className="animate-fade-in">
@@ -1137,6 +1206,20 @@ Mohon segera diproses ya, terima kasih!`;
               <div>
                 <label className="block text-sm font-bold mb-2">Tanggal Pengambilan</label>
                 <RetroDatePicker value={orderDate} onChange={(date) => setOrderDate(date)} />
+              </div>
+
+              {/* SUMMARY ESTIMASI HARGA */}
+              <div className="bg-retro-orange/20 border-2 border-retro-dark p-3 rounded-xl flex justify-between items-center text-xs font-bold mt-4">
+                <div>
+                  <span className="text-gray-600 block">Total Pesanan: {boxes.length} Box</span>
+                  <span className="text-[10px] text-gray-500 font-semibold">Estimasi Total Perubahan</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-gray-500 block">Total Harga</span>
+                  <span className="text-lg font-black text-retro-dark">
+                    Rp {(boxes.reduce((sum, b) => sum + getBoxPrice(b.flavor, b.mix), 0)).toLocaleString('id-ID')}
+                  </span>
+                </div>
               </div>
             </div>
 
