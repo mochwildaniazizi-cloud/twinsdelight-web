@@ -24,19 +24,19 @@ const isSupabaseConfigured =
 const supabase = isSupabaseConfigured ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 const flavorOptions = [
-  { value: 'Cokelat (8 pcs)', label: '🍫 Cokelat (8 pcs) — Rp 40k' },
-  { value: 'Keju (8 pcs)', label: '🧀 Keju (8 pcs) — Rp 40k' },
-  { value: 'Cokelat Keju (8 pcs)', label: '🍫🧀 Cokelat Keju (8 pcs) — Rp 45k' },
-  { value: 'Tape (8 pcs)', label: '🍌 Tape (8 pcs) — Rp 40k' },
-  { value: 'Box Mix (8 pcs)', label: '🎁 Box Mix (8 pcs, 2 rasa) — Rp 40k' },
+  { value: 'Cokelat (8 pcs)', label: 'Cokelat (8 pcs) — Rp 40.000' },
+  { value: 'Keju (8 pcs)', label: 'Keju (8 pcs) — Rp 40.000' },
+  { value: 'Cokelat Keju (8 pcs)', label: 'Cokelat Keju (8 pcs) — Rp 45.000' },
+  { value: 'Tape (8 pcs)', label: 'Tape (8 pcs) — Rp 40.000' },
+  { value: 'Box Mix (8 pcs)', label: 'Box Mix (8 pcs, 2 rasa) — Rp 40.000' },
 ];
 
 // Pilihan rasa untuk Box Mix (4 pcs per rasa)
 const mixFlavorOptions = [
-  { value: 'Cokelat', label: '🍫 Cokelat' },
-  { value: 'Keju', label: '🧀 Keju' },
-  { value: 'Cokelat Keju', label: '🍫🧀 Cokelat Keju' },
-  { value: 'Tape', label: '🍌 Tape' },
+  { value: 'Cokelat', label: 'Cokelat (4 pcs)' },
+  { value: 'Keju', label: 'Keju (4 pcs)' },
+  { value: 'Cokelat Keju', label: 'Cokelat Keju (4 pcs)' },
+  { value: 'Tape', label: 'Tape (4 pcs)' },
 ];
 
 // Hitung harga per box
@@ -580,7 +580,7 @@ function App() {
     }
 
     return (
-      <div className="text-[11px] text-gray-500 font-semibold space-y-1 leading-tight">
+      <div className="text-[11px] text-gray-600 font-semibold space-y-1 leading-tight">
         {boxesDetail.map((box, i) => {
           let label = box.flavor;
           if (box.flavor && box.flavor.startsWith('Box Mix') && box.mix) {
@@ -594,19 +594,10 @@ function App() {
             if (box.custom.tape > 0) parts.push(`Tape: ${box.custom.tape} pcs`);
             label = `Custom (${parts.join(', ')})`;
           }
-          
-          let emoji = '📦';
-          if (box.flavor === 'Cokelat (8 pcs)') emoji = '🍫';
-          else if (box.flavor === 'Keju (8 pcs)') emoji = '🧀';
-          else if (box.flavor === 'Cokelat Keju (8 pcs)') emoji = '🍫🧀';
-          else if (box.flavor === 'Tape (8 pcs)') emoji = '🍌';
-          else if (box.flavor && box.flavor.startsWith('Box Mix')) emoji = '🎁';
-          else if (box.flavor === 'Mix (4 Cokelat, 4 Keju)') emoji = '🍰'; // backward compat
-          else if (box.flavor === 'Custom (Pilih Sendiri)') emoji = '⚙️'; // backward compat
 
           return (
             <div key={i} className="flex items-start gap-1">
-              <span>{emoji}</span>
+              <span className="text-gray-400">•</span>
               <span>Box {i + 1}: {label}</span>
             </div>
           );
@@ -624,46 +615,85 @@ function App() {
     else if (productionDateFilter === 'TOMORROW') dateLabel = `Besok (${formatDateDisplay(tomorrowStr)})`;
     else if (productionDateFilter === 'CUSTOM') dateLabel = formatDateDisplay(customProductionDate);
 
-    const messageText = `🍩 *REKAP PRODUKSI TWINSBOLLEN*
-📅 Tanggal: ${dateLabel}
+    let targetDate = null;
+    if (productionDateFilter === 'TODAY') targetDate = todayStr;
+    else if (productionDateFilter === 'TOMORROW') targetDate = tomorrowStr;
+    else if (productionDateFilter === 'CUSTOM') targetDate = customProductionDate;
+
+    const filteredOrders = targetDate
+      ? orders.filter(o => o.date === targetDate)
+      : orders;
+
+    let ordersListText = '';
+    if (filteredOrders.length > 0) {
+      ordersListText = filteredOrders.map((o, idx) => {
+        const boxDetails = o.boxesDetail ? o.boxesDetail.map((b, bi) => {
+          if (b.flavor && b.flavor.startsWith('Box Mix') && b.mix) {
+            return `   - Box ${bi+1}: Box Mix (${b.mix.flavor1} & ${b.mix.flavor2})`;
+          }
+          return `   - Box ${bi+1}: ${b.flavor}`;
+        }).join('\n') : '';
+
+        const statusTag = o.status === 'Selesai' ? 'Selesai' : 'Menunggu';
+        const methodTag = o.address && o.address.startsWith('Ambil Sendiri') ? 'Pickup' : 'Delivery';
+        return `${idx + 1}. *${o.name}* (${statusTag} | ${methodTag})\n   WA: ${o.phone || '-'}\n${boxDetails}`;
+      }).join('\n\n');
+    } else {
+      ordersListText = '_Belum ada pesanan terdaftar_';
+    }
+
+    const messageText = `*REKAP PRODUKSI TWINSBOLLEN*
 ----------------------------------------
-📦 Total: ${totals.totalBox} Box (${totals.totalPcs} pcs)
-💰 Total Omzet: Rp ${(totals.totalHarga / 1000).toFixed(0)}k
+Tanggal: ${dateLabel}
+Total Pesanan: ${totals.totalBox} Box (${totals.totalPcs} pcs)
+Estimasi Omzet: Rp ${totals.totalHarga.toLocaleString('id-ID')}
+----------------------------------------
 
-Rincian Adonan:
-🍫 Cokelat: ${totals.cokelat} pcs
-🧀 Keju: ${totals.keju} pcs
-🍫🧀 Cokelat Keju: ${totals.coklatKeju} pcs
-🍌 Tape: ${totals.tape} pcs
+RINCIAN ADONAN:
+- Cokelat: ${totals.cokelat} pcs
+- Keju: ${totals.keju} pcs
+- Cokelat Keju: ${totals.coklatKeju} pcs
+- Tape: ${totals.tape} pcs
 
-_TwinsDelight Dashboard_`;
+DAFTAR PEMESAN (${filteredOrders.length} Order):
+${ordersListText}
+
+----------------------------------------
+TwinsDelight Web System`;
 
     const encodedText = encodeURIComponent(messageText);
     window.open(`https://wa.me/?text=${encodedText}`, '_blank');
   };
 
   const handleConfirmOrderWhatsApp = (newOrder) => {
-    const summaryText = `🍩 *PESANAN BARU TWINSBOLLEN*
+    const totalHargaOrder = newOrder.boxesDetail.reduce((sum, b) => sum + getBoxPrice(b.flavor, b.mix), 0);
+    const isPickup = newOrder.address && newOrder.address.startsWith('Ambil Sendiri');
+    
+    const summaryText = `*PESANAN BARU TWINSBOLLEN*
 ----------------------------------------
-📌 *ID:* ${newOrder.id}
-👤 *Nama:* ${newOrder.name}
-📞 *WA:* ${newOrder.phone}
-📍 *Alamat:* ${newOrder.address}
-📅 *Tanggal Ambil:* ${formatDateDisplay(newOrder.date)}
-📦 *Jumlah:* ${newOrder.totalBoxes} Box
+ID Pesanan: ${newOrder.id}
+Nama: ${newOrder.name}
+Nomor WA: ${newOrder.phone}
+Metode: ${isPickup ? 'Pickup (Ambil Sendiri)' : 'Delivery'}
+Alamat: ${newOrder.address}
+Tanggal Ambil: ${formatDateDisplay(newOrder.date)}
+Jumlah: ${newOrder.totalBoxes} Box
+----------------------------------------
 
-*Rincian Rasa:*
+RINCIAN RASA:
 ${newOrder.boxesDetail.map((box, i) => {
+  const price = getBoxPrice(box.flavor, box.mix);
   if (box.flavor && box.flavor.startsWith('Box Mix') && box.mix) {
     const countStr = box.flavor.includes('4 pcs') ? '2+2 pcs' : '4+4 pcs';
-    return `- Box ${i+1}: 🎁 Box Mix (${box.mix.flavor1} & ${box.mix.flavor2}, ${countStr}) — Rp ${(getBoxPrice(box.flavor, box.mix)/1000).toFixed(0)}k`;
+    return `- Box ${i+1}: Box Mix (${box.mix.flavor1} & ${box.mix.flavor2}, ${countStr}) - Rp ${price.toLocaleString('id-ID')}`;
   }
-  return `- Box ${i+1}: ${box.flavor} — Rp ${(getBoxPrice(box.flavor)/1000).toFixed(0)}k`;
+  return `- Box ${i+1}: ${box.flavor} - Rp ${price.toLocaleString('id-ID')}`;
 }).join('\n')}
 
-💰 *Total Harga: Rp ${(newOrder.boxesDetail.reduce((sum, b) => sum + getBoxPrice(b.flavor, b.mix), 0) / 1000).toFixed(0)}k*
+----------------------------------------
+TOTAL HARGA: Rp ${totalHargaOrder.toLocaleString('id-ID')}
 
-Mohon segera diproses ya, terima kasih!`;
+Mohon segera diproses pesanan saya, terima kasih!`;
 
     const encodedTextUrl = encodeURIComponent(summaryText);
     window.open(`https://wa.me/6285646674868?text=${encodedTextUrl}`, '_blank');
