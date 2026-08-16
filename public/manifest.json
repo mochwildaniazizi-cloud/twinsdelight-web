@@ -3,9 +3,9 @@
   "name": "TwinsDelight - Dashboard TwinsBollen",
   "icons": [
     {
-      "src": "favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
+      "src": "/TwinsDelight-Logo.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512 any",
       "purpose": "any maskable"
     }
   ],
